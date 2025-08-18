@@ -8,7 +8,6 @@ import ExploreArticles from './Pages/ExploreArticle/ExploreArticle';
 import PostPage from './Pages/PostPage/PostPage';
 import RegisterPage from './Pages/RegisterPage/RegisterPage';
 import AboutPage from './Pages/AboutPage/AboutPage';
-import AItest from './Pages/AItest/AItest';
 import { useDispatch } from "react-redux";
 import { setCredentials } from './redux/authSlice';
 import { useEffect } from 'react';
@@ -35,7 +34,6 @@ function App() {
         <Route path="/post/:id" element={<PostPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/aitest" element={<AItest />} />
       </Routes>
     </>
   );

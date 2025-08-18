@@ -13,7 +13,7 @@ export default function HomePage() {
   const [popularPosts, setPopularPosts] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/blogs/")
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/blogs/`)
       .then((res) => res.json())
       .then((data) => {
         setBlogs(data);

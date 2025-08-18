@@ -34,7 +34,7 @@ export default function PostPage() {
   const [category, setCategory] = useState("");
   const [coverImage, setCoverImage] = useState("");
 
-  const API_URL = `http://localhost:5000/api/blogs/${id}`;
+  const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/blogs/${id}`;
 
   const fetchBlog = async () => {
     setLoading(true);
@@ -64,7 +64,7 @@ export default function PostPage() {
     try {
       const formData = new FormData();
       formData.append("image", file);
-      const res = await fetch("http://localhost:5000/api/upload", {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });

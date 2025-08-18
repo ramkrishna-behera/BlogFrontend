@@ -48,7 +48,7 @@ export default function ExploreArticles() {
     const fetchBlogs = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:5000/api/blogs");
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/blogs`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (isMounted) {

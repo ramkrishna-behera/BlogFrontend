@@ -7,6 +7,29 @@ import ReactQuill from "react-quill";
 import ReactMarkdown from "react-markdown";
 import "react-quill/dist/quill.snow.css";
 
+// --- Fast AI image via Pollinations ---
+const fetchAIImage = (prompt, setCoverImage, setImgLoading, setError) => {
+  if (!prompt) return;
+  setImgLoading(true);
+
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    `${prompt}, award-winning photography, professional stock photo style, ultra detailed, vibrant colors, soft natural lighting, shallow depth of field, no text, no watermark, 35mm lens, clean background, confident, `
+  )}`;
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    setCoverImage(imageUrl);
+    setImgLoading(false);
+  };
+  img.onerror = () => {
+    console.error("AI image failed to load");
+    setError("Failed to generate image. Please try again.");
+    setImgLoading(false);
+  };
+  img.src = imageUrl;
+};
+
 export default function WritePage() {
   const navigate = useNavigate();
 
@@ -15,24 +38,24 @@ export default function WritePage() {
   const [category, setCategory] = useState("");
   const [coverImage, setCoverImage] = useState(null);
 
-  // Two editing modes
-  const [activeTab, setActiveTab] = useState("markdown"); // 'markdown' | 'rich'
+  // Editing modes
+  const [activeTab, setActiveTab] = useState("markdown");
   const [markdownContent, setMarkdownContent] = useState("");
-  const [richContent, setRichContent] = useState(""); // Quill (HTML)
+  const [richContent, setRichContent] = useState("");
 
-  // App state
+  // UI & Loading States
   const [isDragging, setIsDragging] = useState(false);
-  const [loading, setLoading] = useState(false); // includes AI generation + submit
-  const [aiLoading, setAiLoading] = useState(false); // specifically for AI stream loader
+  const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [imgLoading, setImgLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [notLoggedInMsg, setNotLoggedInMsg] = useState(null);
 
-  const API_URL = "http://localhost:5000/api/blogs";
-  const AI_URL = "http://localhost:5000/api/ai/stream-blog";
+  const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/blogs`;
+  const AI_URL = `${process.env.REACT_APP_BACKEND_URL}/api/ai/stream-blog`;
   const token = localStorage.getItem("authToken");
 
-  // Quill toolbar configuration
   const quillModules = useMemo(
     () => ({
       toolbar: [
@@ -46,18 +69,14 @@ export default function WritePage() {
     []
   );
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!token) {
       setNotLoggedInMsg("You must be logged in to write an article.");
-      const timer = setTimeout(() => {
-        navigate("/login");
-      }, 3000);
+      const timer = setTimeout(() => navigate("/login"), 3000);
       return () => clearTimeout(timer);
     }
   }, [token, navigate]);
 
-  // Image upload handlers
   const handleImageUpload = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => setCoverImage(e.target?.result);
@@ -67,7 +86,7 @@ export default function WritePage() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) handleImageUpload(file);
+    file?.type.startsWith("image/") && handleImageUpload(file);
   };
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -79,94 +98,59 @@ export default function WritePage() {
   };
   const removeCoverImage = () => setCoverImage(null);
 
-  // Minimal Markdown → HTML (basic) so you don't need extra deps
-  // Handles headings (#, ##, ###), **bold**, *italic*, bullet lists (- ), paragraphs, and links [text](url)
   const markdownToHtml = (md) => {
     if (!md) return "";
-
-    let html = md;
-
-    // Escape <
-    html = html.replace(/</g, "&lt;");
-
-    // Headings
+    let html = md.replace(/</g, "&lt;");
     html = html
       .replace(/^### (.*$)/gim, "<h3>$1</h3>")
       .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-      .replace(/^# (.*$)/gim, "<h1>$1</h1>");
-
-    // Bold **text**
-    html = html.replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>");
-
-    // Italic *text*
-    html = html.replace(/\*(.*?)\*/gim, "<em>$1</em>");
-
-    // Links [text](url)
-    html = html.replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gim,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-
-    // Unordered lists: lines starting with "- "
-    // Convert groups of "- ..." into <ul><li>...</li></ul>
-    html = html.replace(
-      /(^|\n)- (.*(?:\n(?!\n|- ).+)*)/gim,
-      (match) => {
-        // Wrap each "- item" line into <li>
-        const items = match
-          .trim()
-          .split("\n")
-          .map((line) => line.replace(/^- (.*)/, "<li>$1</li>"))
-          .join("");
-        return `<ul>${items}</ul>`;
-      }
-    );
-
-    // New paragraphs for plain lines (that are not inside tags)
-    html = html
-      .split("\n")
-      .map((line) => {
-        if (
-          !line.trim() ||
-          /^<\/?(h1|h2|h3|ul|li|strong|em|a)/.test(line.trim())
-        ) {
-          return line;
+      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+      .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/gim, "<em>$1</em>")
+      .replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gim,
+        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+      )
+      .replace(
+        /(^|\n)- (.*(?:\n(?!\n|- ).+)*)/gim,
+        (match) => {
+          const items = match
+            .trim()
+            .split("\n")
+            .map((line) => line.replace(/^- (.*)/, "<li>$1</li>"))
+            .join("");
+          return `<ul>${items}</ul>`;
         }
-        return `<p>${line}</p>`;
-      })
+      )
+      .split("\n")
+      .map((line) =>
+        !line.trim() || /^<\/?(h1|h2|h3|ul|li|strong|em|a)/.test(line.trim())
+          ? line
+          : `<p>${line}</p>`
+      )
       .join("\n");
-
     return html;
   };
 
-  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
 
-    if (!category) {
-      setError("Please select a category.");
-      setLoading(false);
-      return;
-    }
-    if (!coverImage) {
-      setError("Please add a cover image.");
+    if (!category || !coverImage) {
+      setError(!category ? "Please select a category." : "Please add a cover image.");
       setLoading(false);
       return;
     }
 
-    // Use Markdown content by default (better for portability),
-    // or switch to richContent if Rich Text tab is active.
     const finalContent = activeTab === "rich" ? richContent : markdownContent;
-
     const blogData = {
       title,
       content: finalContent,
       category: category || "Other",
       image: coverImage,
-      format: activeTab, // 'markdown' or 'rich' (optional, in case backend wants to know)
+      format: activeTab,
     };
 
     try {
@@ -178,12 +162,10 @@ export default function WritePage() {
         },
         body: JSON.stringify(blogData),
       });
-
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.message || "Failed to create blog");
       }
-
       await response.json();
       setSuccessMsg("Blog created successfully!");
       setTitle("");
@@ -199,54 +181,49 @@ export default function WritePage() {
     }
   };
 
-  // AI streaming → fills Markdown editor
   const handleAIGenerate = () => {
-    if (!title) {
-      setError("Please enter a title before generating with AI.");
-      return;
-    }
-
+    if (!title) return setError("Please enter a title before generating with AI.");
     setAiLoading(true);
-    setLoading(true); // lock buttons too
     setError(null);
     setActiveTab("markdown");
-    setMarkdownContent(""); // clear old content
+    setMarkdownContent("");
 
     const params = new URLSearchParams({ title });
-    const eventSource = new EventSource(`${AI_URL}?${params.toString()}`);
+    const es = new EventSource(`${AI_URL}?${params.toString()}`);
 
-    eventSource.onmessage = (event) => {
+    es.onmessage = (event) => {
       if (event.data === "[DONE]") {
-        eventSource.close();
+        es.close();
         setAiLoading(false);
-        setLoading(false);
         return;
       }
       try {
-        const chunk = JSON.parse(event.data);
-        setMarkdownContent((prev) => prev + chunk);
+        setMarkdownContent((prev) => prev + JSON.parse(event.data));
       } catch (err) {
         console.error("Error parsing chunk:", err);
       }
     };
 
-    eventSource.onerror = (err) => {
+    es.onerror = (err) => {
       console.error("SSE error", err);
       setError("Failed to generate content. Please try again.");
       setAiLoading(false);
-      setLoading(false);
-      eventSource.close();
+      es.close();
     };
   };
 
-  // Copy/convert Markdown → Quill (basic)
+  const handleAIGenerateImage = () => {
+    if (!title) return setError("Please enter a title before generating the cover image.");
+    setError(null);
+    fetchAIImage(title, setCoverImage, setImgLoading, setError);
+  };
+
   const copyMarkdownToQuill = () => {
     const html = markdownToHtml(markdownContent);
     setRichContent(html || "");
     setActiveTab("rich");
   };
 
-  // Not logged in view
   if (!token) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center bg-gray-50">
@@ -262,7 +239,6 @@ export default function WritePage() {
   return (
     <div className="pt-20 min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-2">
             Write New Article
@@ -270,24 +246,14 @@ export default function WritePage() {
           <p className="text-gray-600 text-lg">Share your thoughts with the world</p>
         </div>
 
-        {/* Form */}
         <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-10">
           <form className="space-y-8" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-4 mb-4 text-red-700 bg-red-100 rounded">{error}</div>
-            )}
-            {successMsg && (
-              <div className="p-4 mb-4 text-green-700 bg-green-100 rounded">
-                {successMsg}
-              </div>
-            )}
+            {error && <div className="p-4 mb-4 text-red-700 bg-red-100 rounded">{error}</div>}
+            {successMsg && <div className="p-4 mb-4 text-green-700 bg-green-100 rounded">{successMsg}</div>}
 
             {/* Title */}
             <div className="space-y-3">
-              <label
-                htmlFor="title"
-                className="flex items-center text-lg font-semibold text-gray-800 gap-2"
-              >
+              <label htmlFor="title" className="flex items-center text-lg font-semibold text-gray-800 gap-2">
                 <FileText className="w-5 h-5 text-gray-600" />
                 Article Title
               </label>
@@ -304,25 +270,31 @@ export default function WritePage() {
 
             {/* Cover Image */}
             <div className="space-y-3">
-              <label className="flex items-center text-lg font-semibold text-gray-800 gap-2">
-                <ImageIcon className="w-5 h-5 text-gray-600" />
-                Cover Image
-              </label>
-
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-lg font-semibold text-gray-800 gap-2">
+                  <ImageIcon className="w-5 h-5 text-gray-600" />
+                  Cover Image
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAIGenerateImage}
+                  disabled={!title || imgLoading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-500 rounded-lg shadow hover:from-green-600 hover:to-blue-600 disabled:opacity-50 transition"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {imgLoading ? "Generating..." : "Generate Image with AI"}
+                </button>
+              </div>
               {coverImage ? (
                 <div className="relative group">
                   <div className="relative overflow-hidden rounded-2xl bg-white/60 border">
-                    <img
-                      src={coverImage}
-                      alt="Cover preview"
-                      className="w-full h-64 object-cover"
-                    />
+                    <img src={coverImage} alt="Cover preview" className="w-full h-64 object-cover"/>
                     <button
                       type="button"
                       onClick={removeCoverImage}
                       className="absolute top-4 right-4 p-2 bg-red-500/80 text-white rounded-full hover:bg-red-600/90"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-4 h-4"/>
                     </button>
                   </div>
                 </div>
@@ -332,9 +304,7 @@ export default function WritePage() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer ${
-                    isDragging
-                      ? "border-blue-500/50 bg-blue-50/50"
-                      : "border-gray-300/50 bg-white/40"
+                    isDragging ? "border-blue-500/50 bg-blue-50/50" : "border-gray-300/50 bg-white/40"
                   }`}
                 >
                   <input
@@ -342,14 +312,12 @@ export default function WritePage() {
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
+                      file && handleImageUpload(file);
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-700 mb-2">
-                    Drop your cover image here
-                  </p>
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4"/>
+                  <p className="text-lg font-medium text-gray-700 mb-2">Drop your cover image here</p>
                   <p className="text-gray-500">or click to browse files</p>
                 </div>
               )}
@@ -362,29 +330,23 @@ export default function WritePage() {
                   <FileText className="w-5 h-5 text-gray-600" />
                   Content
                 </label>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleAIGenerate}
-                    disabled={!title || loading}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-500 rounded-lg shadow hover:from-green-600 hover:to-blue-600 disabled:opacity-50 transition"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {aiLoading ? "Generating..." : "Generate with AI"}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleAIGenerate}
+                  disabled={!title || aiLoading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-500 rounded-lg shadow hover:from-green-600 hover:to-blue-600 disabled:opacity-50 transition"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {aiLoading ? "Generating..." : "Generate with AI"}
+                </button>
               </div>
 
-              {/* Tabs */}
               <div className="flex gap-2 rounded-xl p-1 bg-white/60 border shadow-inner w-fit">
                 <button
                   type="button"
                   onClick={() => setActiveTab("markdown")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    activeTab === "markdown"
-                      ? "bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow"
-                      : "text-gray-700 hover:bg-white"
+                    activeTab === "markdown" ? "bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow" : "text-gray-700 hover:bg-white"
                   }`}
                 >
                   Markdown
@@ -393,16 +355,14 @@ export default function WritePage() {
                   type="button"
                   onClick={() => setActiveTab("rich")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    activeTab === "rich"
-                      ? "bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow"
-                      : "text-gray-700 hover:bg-white"
+                    activeTab === "rich" ? "bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow" : "text-gray-700 hover:bg-white"
                   }`}
                 >
                   Rich Text
                 </button>
               </div>
 
-              {/* Markdown Editor + Preview */}
+              {/* Markdown Tab */}
               {activeTab === "markdown" && (
                 <>
                   <textarea
@@ -426,12 +386,9 @@ export default function WritePage() {
                   </div>
 
                   <div className="relative">
-                    {/* Loader overlay while AI streaming */}
                     {aiLoading && (
                       <div className="absolute inset-0 z-10 rounded-2xl bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                        <div className="animate-pulse text-gray-700 font-medium">
-                          Generating content…
-                        </div>
+                        <div className="animate-pulse text-gray-700 font-medium">Generating content…</div>
                       </div>
                     )}
                     <div className="prose max-w-none bg-white/60 p-6 rounded-2xl shadow-inner border">
@@ -445,7 +402,7 @@ export default function WritePage() {
                 </>
               )}
 
-              {/* Rich Text (Quill) */}
+              {/* Rich Text Tab */}
               {activeTab === "rich" && (
                 <div className="relative">
                   <ReactQuill
@@ -464,7 +421,6 @@ export default function WritePage() {
                       focus-within:ring-4 focus-within:ring-blue-500/20
                     "
                   />
-                  {/* Hint for converting from Markdown if needed */}
                   {!richContent && markdownContent && (
                     <div className="mt-2 text-sm text-gray-500">
                       Tip: Click <span className="font-medium">“Use in Rich Editor”</span> on the Markdown tab to copy/convert your Markdown here.
@@ -474,12 +430,9 @@ export default function WritePage() {
               )}
             </div>
 
-            {/* Category */}
+            {/* Category Selector */}
             <div className="space-y-3">
-              <label
-                htmlFor="category"
-                className="flex items-center text-base font-semibold text-gray-800 gap-2"
-              >
+              <label htmlFor="category" className="flex items-center text-base font-semibold text-gray-800 gap-2">
                 <Tag className="w-5 h-5 text-gray-600" />
                 Category
               </label>
@@ -504,7 +457,7 @@ export default function WritePage() {
               </p>
             </div>
 
-            {/* Buttons */}
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
               <button
                 type="button"
@@ -524,7 +477,6 @@ export default function WritePage() {
         </div>
       </div>
 
-      {/* Subtle Quill theme polish (optional) */}
       <style>{`
         .ql-toolbar.ql-snow .ql-picker-label,
         .ql-toolbar.ql-snow .ql-stroke {
