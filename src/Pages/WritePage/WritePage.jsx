@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Upload, X, Tag, FileText, ImageIcon, Sparkles } from "lucide-react";

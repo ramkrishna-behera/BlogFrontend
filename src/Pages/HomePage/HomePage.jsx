@@ -1,4 +1,3 @@
-"use client";
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -6,6 +5,7 @@ import { ChevronRight, Clock, Eye, TrendingUp } from "lucide-react";
 import { Button } from "../../Components/ui/button";
 import { Input } from "../../Components/ui/input";
 import BlogCard from "../../Components/BlogCard/BlogCard";
+import calculateReadTime from "../../Functions/calculateReadTime"
 
 export default function HomePage() {
   const [blogs, setBlogs] = useState([]);
@@ -16,14 +16,22 @@ export default function HomePage() {
     fetch(`${process.env.REACT_APP_BACKEND_URL}/api/blogs/`)
       .then((res) => res.json())
       .then((data) => {
-        setBlogs(data);
+        // ✅ Add readTime for each blog
+        const blogsWithReadTime = data.map((b) => ({
+          ...b,
+          readTime: calculateReadTime(b.content),
+        }));
+
+        setBlogs(blogsWithReadTime);
 
         // Featured article
-        const featured = data.find((b) => b._id === "689a03ad2a07ad189d6586db");
+        const featured = blogsWithReadTime.find(
+          (b) => b._id === "689a03ad2a07ad189d6586db"
+        );
         setFeaturedArticle(featured);
 
         // Popular posts (top 4 by views)
-        const popular = [...data]
+        const popular = [...blogsWithReadTime]
           .sort((a, b) => b.views - a.views)
           .slice(0, 4);
         setPopularPosts(popular);
@@ -71,19 +79,23 @@ export default function HomePage() {
                         {featuredArticle.title}
                       </h2>
 
-                      <p className="text-xl text-white/90 mb-8 leading-relaxed">
+                      <p className="text-xl text-white/90 mb-8 leading-relaxed line-clamp-4">
                         {featuredArticle.content}
                       </p>
 
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                        <div className="flex items-center space-x-4 text-white/80">
-                          <span className="font-medium">{featuredArticle.author?.name}</span>
+                        <div className="flex items-center space-x-4 text-white/80 text-sm">
+                          <span className="font-medium">
+                            {featuredArticle.author?.name}
+                          </span>
                           <span>•</span>
-                          <span>{new Date(featuredArticle.createdAt).toLocaleDateString()}</span>
+                          <span>
+                            {new Date(featuredArticle.createdAt).toLocaleDateString()}
+                          </span>
                           <span>•</span>
                           <span className="flex items-center">
                             <Clock className="w-4 h-4 mr-1" />
-                            {featuredArticle.readTime || "Read"}
+                            {featuredArticle.readTime}
                           </span>
                         </div>
 
@@ -103,9 +115,14 @@ export default function HomePage() {
             {/* Latest Posts Grid */}
             <section>
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-gray-900">Latest Articles</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Latest Articles
+                </h3>
                 <Link to="/explore">
-                  <Button variant="ghost" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <Button
+                    variant="ghost"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
                     View All
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -145,14 +162,13 @@ export default function HomePage() {
                       </span>
                       <span className="flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
-                        {post.readTime || "Read"}
+                        {post.readTime}
                       </span>
                     </div>
                   </Link>
                 ))}
               </div>
             </section>
-
 
             {/* Trending Topics */}
             <section className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
@@ -180,7 +196,9 @@ export default function HomePage() {
             {/* Newsletter Signup */}
             <section className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 shadow-lg text-white">
               <h3 className="text-lg font-semibold mb-3">Stay Updated</h3>
-              <p className="text-blue-100 text-sm mb-4">Get the latest articles delivered to your inbox weekly.</p>
+              <p className="text-blue-100 text-sm mb-4">
+                Get the latest articles delivered to your inbox weekly.
+              </p>
               <div className="space-y-3">
                 <Input
                   type="email"

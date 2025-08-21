@@ -1,8 +1,8 @@
-"use client";
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, User, Heart, Eye } from "lucide-react";
+import { Calendar, Clock, Eye } from "lucide-react";
+import calculateReadTime from "../../Functions/calculateReadTime";
 
 /**
  * BlogCard - clickable card for each blog post
@@ -10,6 +10,9 @@ import { Calendar, User, Heart, Eye } from "lucide-react";
  *  - post: blog object
  */
 export default function BlogCard({ post }) {
+  // ✅ Always calculate readTime if not provided
+  const readTime = post.readTime || calculateReadTime(post.content);
+
   return (
     <Link to={`/post/${post._id}`} className="group">
       <article className="group cursor-pointer bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/50">
@@ -35,13 +38,14 @@ export default function BlogCard({ post }) {
             {post.content}
           </p>
 
+          {/* Author + Date */}
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span className="font-medium">{post.author?.name || "Unknown"}</span>
             <div className="flex items-center space-x-2">
               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
               <span>•</span>
               <span className="flex items-center">
-                <Calendar className="w-3 h-3 mr-1" />{" "}
+                <Calendar className="w-3 h-3 mr-1" />
                 {Math.round((Date.now() - new Date(post.createdAt)) / (1000 * 60 * 60 * 24)) <= 7
                   ? "New"
                   : ""}
@@ -49,9 +53,10 @@ export default function BlogCard({ post }) {
             </div>
           </div>
 
+          {/* Read Time + Views */}
           <div className="flex items-center justify-between text-xs mt-4 text-gray-600">
             <span className="flex items-center gap-2">
-              <Heart className="w-4 h-4 text-red-500" /> {post.likes || 0}
+              <Clock className="w-4 h-4 text-gray-500" /> {readTime}
             </span>
             <span className="flex items-center gap-2">
               <Eye className="w-4 h-4 text-blue-500" /> {post.views || 0}
