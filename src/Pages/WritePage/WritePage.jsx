@@ -77,16 +77,41 @@ export default function WritePage() {
     }
   }, [token, navigate]);
 
-  const handleImageUpload = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => setCoverImage(e.target?.result);
-    reader.readAsDataURL(file);
+  const handleImageUpload = async (file) => {
+  if (!file) return;
+  setImgLoading(true);
+  setError(null);
+
+  try {
+    const formData = new FormData();
+    formData.append("image", file); // must match "upload.single('image')" in backend
+
+    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to upload image");
+    }
+
+      const data = await res.json();
+      setCoverImage(data.imageUrl); // <-- Cloudinary hosted URL
+    } catch (err) {
+      console.error("Image upload error:", err);
+      setError("Image upload failed, please try again.");
+    } finally {
+      setImgLoading(false);
+    }
   };
+
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    file?.type.startsWith("image/") && handleImageUpload(file);
+    if (file?.type.startsWith("image/")) {
+      handleImageUpload(file);
+    }
   };
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -312,7 +337,7 @@ export default function WritePage() {
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      file && handleImageUpload(file);
+                      if (file) handleImageUpload(file);
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />

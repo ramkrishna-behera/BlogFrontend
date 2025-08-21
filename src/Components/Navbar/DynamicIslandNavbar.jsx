@@ -109,13 +109,7 @@ export default function DynamicIslandNavbar() {
                 <span className="text-sm font-medium">Explore</span>
               </Link>
 
-              <Link
-                to="/categories"
-                className="text-white/80 hover:text-white hover:scale-110 transition-all duration-200 flex items-center space-x-1 whitespace-nowrap"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span className="text-sm font-medium">Categories</span>
-              </Link>
+              
               <Link
                 to="/about"
                 className="text-white/80 hover:text-white hover:scale-110 transition-all duration-200 flex items-center space-x-1 whitespace-nowrap"
