@@ -5,6 +5,7 @@ import { ChevronRight, Clock, Eye, TrendingUp } from "lucide-react";
 import { Button } from "../../Components/ui/button";
 import { Input } from "../../Components/ui/input";
 import BlogCard from "../../Components/BlogCard/BlogCard";
+import Newsletter from "../../Components/NewsLetter/NewsLetter";
 import calculateReadTime from "../../Functions/calculateReadTime"
 
 export default function HomePage() {
@@ -192,24 +193,8 @@ export default function HomePage() {
                 ))}
               </div>
             </section>
-
             {/* Newsletter Signup */}
-            <section className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 shadow-lg text-white">
-              <h3 className="text-lg font-semibold mb-3">Stay Updated</h3>
-              <p className="text-blue-100 text-sm mb-4">
-                Get the latest articles delivered to your inbox weekly.
-              </p>
-              <div className="space-y-3">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70 rounded-xl focus:bg-white/30 focus:ring-2 focus:ring-white/50"
-                />
-                <Button className="w-full bg-white text-blue-600 hover:bg-gray-100 rounded-xl font-semibold transition-all duration-200 hover:scale-105">
-                  Subscribe
-                </Button>
-              </div>
-            </section>
+            <Newsletter />
           </div>
         </div>
       </div>
