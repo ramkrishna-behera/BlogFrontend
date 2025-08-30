@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Clock, Eye, TrendingUp } from "lucide-react";
 import { Button } from "../../Components/ui/button";
-import { Input } from "../../Components/ui/input";
 import BlogCard from "../../Components/BlogCard/BlogCard";
 import Newsletter from "../../Components/NewsLetter/NewsLetter";
 import calculateReadTime from "../../Functions/calculateReadTime"

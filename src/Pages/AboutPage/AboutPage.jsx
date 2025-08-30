@@ -9,7 +9,7 @@ export default function AboutPage() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Simulated AI answer — in real app, call your backend AI endpoint
+  // Call backend (dummy for now)
   const handleAskAI = async (e) => {
     e.preventDefault();
     if (!question.trim()) return;
@@ -18,39 +18,59 @@ export default function AboutPage() {
     setAnswer("");
 
     try {
-      // Replace this with actual AI API call
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      setAnswer(
-        `🤖 Here's what I know: This platform was built to make your experience smooth, secure, and delightful. Your question was "${question}".`
-      );
+      // 🔹 Dummy request to backend
+      const res = await fetch("http://localhost:5000/api/ask-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      // 🔹 Temporary mock response (since backend not ready)
+      if (!res.ok) {
+        throw new Error("Backend not responding");
+      }
+
+      const data = await res.json();
+      setAnswer(data.answer || "🤖 AI is still warming up... (dummy response).");
     } catch (err) {
-      setAnswer("❌ Something went wrong while fetching AI response.");
+      console.error(err);
+      setAnswer("❌ Could not fetch AI response. Backend might be offline.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 pt-20">
       <Card className="w-full max-w-3xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-8 space-y-6">
         {/* Page Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold text-gray-800">About Us</h1>
           <p className="text-gray-500 text-sm max-w-xl mx-auto">
             Welcome to our platform — a place where technology meets simplicity.
-            Crafted with care, inspired by modern design, and powered by cutting-edge tools.
+            Crafted with care, inspired by modern design, and powered by
+            cutting-edge tools.
           </p>
         </div>
 
         {/* Main Content */}
         <div className="space-y-4 text-gray-700 leading-relaxed">
+          <h2 className="text-2xl font-semibold text-gray-800">About the Blog App</h2>
           <p>
-            Our mission is to make complex things simple. We blend innovation with 
-            aesthetics to provide an intuitive and engaging experience for all users.
+            This blog platform was built to create a space where readers and
+            writers can share ideas, stories, and knowledge seamlessly. Designed
+            with simplicity in mind, it provides a clean and intuitive
+            experience while ensuring performance, security, and scalability.
           </p>
+
+          <h2 className="text-2xl font-semibold text-gray-800">About Me</h2>
           <p>
-            Every feature you see here was built with performance, security, and
-            scalability in mind — so you can focus on what matters most.
+            Hi, I’m <span className="font-medium">Ram Krishna Behera</span>, a
+            B.Tech graduate in Computer Science from BPUT, Odisha. I am a
+            software developer passionate about building user-friendly, reliable,
+            and scalable web applications. My expertise lies in the{" "}
+            <span className="font-medium">MERN stack</span>, with experience as a
+            Front-End Developer.
           </p>
         </div>
 
